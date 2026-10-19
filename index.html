@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+
+<html lang="zh-Hant"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1" name="viewport"/><title>Fishlike Swim Analyzer PWA V3.8.2</title><style>
+:root{font-family:system-ui,-apple-system,'Noto Sans TC',sans-serif;color:#eaf5ff;background:#091521}*{box-sizing:border-box}body{margin:0}header{background:#10263a;padding:16px 20px;border-bottom:1px solid #31516b}h1{font-size:21px;margin:0}small,.hint{color:#a9c5d8}main{max-width:1400px;margin:auto;padding:15px;display:grid;grid-template-columns:minmax(0,2fr) minmax(280px,1fr);gap:16px}.panel{background:#13283c;border:1px solid #2c4b64;border-radius:15px;padding:15px;min-width:0}.viewer{position:relative;background:#02070b;aspect-ratio:16/9;overflow:hidden;touch-action:none;border-radius:9px}.viewer video,.viewer canvas{position:absolute;width:100%;height:100%;inset:0;object-fit:contain}.viewer canvas{cursor:crosshair}button,.filelabel,select,input,textarea{font:inherit}button,.filelabel{background:#214a68;color:white;border:1px solid #457492;border-radius:9px;padding:9px 12px;cursor:pointer}button.active{background:#007fb2;border-color:#73d7ff}button:hover,.filelabel:hover{filter:brightness(1.16)}button:disabled{opacity:.4;cursor:default}.tools,.controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:12px 0}input[type=range]{width:100%}.filelabel input{display:none}.field{display:grid;gap:5px;margin:10px 0}input[type=text],textarea,select{background:#091b2b;color:#eaf5ff;border:1px solid #45627a;border-radius:7px;padding:9px;width:100%}textarea{min-height:90px;resize:vertical}.checks{display:grid;grid-template-columns:1fr 1fr;gap:9px}.checks label{display:flex;gap:6px;align-items:center;font-size:14px}.metric{background:#0a1e2e;border-radius:9px;padding:10px;min-height:45px}.muted{color:#b5cad9;font-size:13px}.side{display:grid;gap:16px;align-content:start}.time{font-variant-numeric:tabular-nums}.shots{display:flex;gap:8px;flex-wrap:wrap}.shot{width:120px}.shot img{width:100%;border-radius:6px}footer{text-align:center;color:#91adc1;padding:20px}@media(max-width:850px){main{grid-template-columns:1fr}.checks{grid-template-columns:1fr 1fr}header{padding:13px}}@media(max-width:440px){button,.filelabel{padding:8px;font-size:13px}.checks{grid-template-columns:1fr}}
+.comparegrid{display:grid;grid-template-columns:minmax(0,1fr);gap:12px}.comparegrid.dual{grid-template-columns:repeat(2,minmax(0,1fr))}.viewwrap{position:relative;min-width:0;padding-right:47px}.verticaltools{position:absolute;right:0;top:0;display:flex;flex-direction:column;gap:5px}.verticaltools button{padding:7px;width:41px;height:40px;font-size:19px}.viewwrap[hidden]{display:none}.viewer{touch-action:none}.viewer canvas{z-index:2}#overlay2{pointer-events:auto;touch-action:none}@media(max-width:650px){.comparegrid.dual{grid-template-columns:1fr}.viewwrap{padding-right:42px}.verticaltools button{width:36px;height:36px;padding:4px}}
+
+/* V3.7.1: fixed video frames, independent content zoom */
+.zoom-panel{background:#0b2132;border:1px solid #355a75;border-radius:10px;padding:9px;margin:7px 0 11px;display:grid;gap:6px}
+.zoom-panel .zoom-line{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.zoom-panel label{font-size:12px;color:#c5e4f6;white-space:nowrap}.zoom-panel input[type=range]{min-width:65px;flex:1;width:auto}.zoom-panel output{font-size:12px;min-width:43px;text-align:right}
+.zoom-panel button{padding:5px 9px;font-size:12px}.zoom-panel button.active{background:#0781b4}
+.viewer{margin-inline:auto;transform-origin:center center}.viewer video,.viewer canvas{transform-origin:center center}
+
+/* V3.8.2 screenshot watermark editor repair */
+#wmEditor[hidden]{display:none!important}#wmEditor{position:fixed;inset:0;z-index:9999;background:#000c;display:flex;align-items:center;justify-content:center;padding:12px;overflow:auto}#wmBox{background:#13283c;border:1px solid #5584a4;border-radius:14px;padding:16px;width:min(680px,100%);max-height:95vh;overflow:auto}#wmPreview{display:block;width:100%;max-height:48vh;object-fit:contain;background:#000;border-radius:8px}#wmBox .wmrow{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin:10px 0}#wmBox label{font-size:14px}#wmBox input[type=range]{width:130px}#wmBox input[type=text]{flex:1;min-width:160px}#wmBox select{width:auto}#wmBox button{min-height:40px}
+</style><style>
+#annotationPanel{position:sticky;top:12px;align-self:start}
+#annotationPanel .tools{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+#annotationPanel #toolbox button{min-height:45px;white-space:normal;text-align:center}
+#annotationPanel .controls{display:flex;gap:8px;align-items:center}
+#annotationPanel .controls button{flex:1 1 135px}
+#annotationPanel .controls label{display:flex;align-items:center;gap:6px}
+#annotationPanel .hint{font-size:12px;line-height:1.5}
+@media(max-width:850px){#annotationPanel{position:static}main{display:flex;flex-direction:column}aside.side{display:contents}#annotationPanel{order:0}main>section.panel{order:1}aside.side>section.panel:not(#annotationPanel){order:2}#annotationPanel .tools{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:480px){#annotationPanel .tools{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:850px){main>section.panel{order:0}#annotationPanel{order:1}}
+/* V3.7.1: fixed video frames, independent content zoom */
+.zoom-panel{background:#0b2132;border:1px solid #355a75;border-radius:10px;padding:9px;margin:7px 0 11px;display:grid;gap:6px}
+.zoom-panel .zoom-line{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.zoom-panel label{font-size:12px;color:#c5e4f6;white-space:nowrap}.zoom-panel input[type=range]{min-width:65px;flex:1;width:auto}.zoom-panel output{font-size:12px;min-width:43px;text-align:right}
+.zoom-panel button{padding:5px 9px;font-size:12px}.zoom-panel button.active{background:#0781b4}
+.viewer{margin-inline:auto;transform-origin:center center}.viewer video,.viewer canvas{transform-origin:center center}
+</style><style>
+/* V2.9: Slowmo-style compact overlay beside the video */
+.viewwrap{padding-right:58px!important;overflow:visible}
+.floating-dock{position:absolute;right:0;top:0;width:52px;z-index:8;display:flex;flex-direction:column;gap:5px;align-items:stretch}
+.dock-buttons{display:flex;flex-direction:column;gap:5px}
+.dock-buttons button,.dock-more>summary{width:48px;height:44px;padding:0!important;display:grid;place-items:center;font-size:23px;border-radius:24px;background:#19465f;border:1px solid #527b95;color:#fff;cursor:pointer;list-style:none}
+.dock-buttons button.active{background:#0099ce;border-color:#a2edff}
+.dock-more>summary::-webkit-details-marker{display:none}
+.dock-more[open] .dock-extra{position:absolute;right:52px;top:0;width:min(310px,75vw);max-height:70vh;overflow:auto;background:#112d42;border:1px solid #507b99;border-radius:12px;padding:12px;box-shadow:0 10px 30px #0009;display:flex;flex-direction:column;align-items:stretch;gap:8px}
+.dock-extra label{display:flex;align-items:center;gap:8px}.dock-extra button{width:100%;min-height:39px}
+.dock-extra #recordInfo{font-size:12px}
+@media(max-width:650px){.viewwrap{padding-right:48px!important}.floating-dock{width:44px}.dock-buttons button,.dock-more>summary{width:40px;height:40px;font-size:20px}.dock-more[open] .dock-extra{right:43px}}
+
+/* V2.9: permanently visible icon-only Slowmo toolbar */
+.floating-dock{width:52px;right:0;top:0;max-height:100%;overflow-y:auto;scrollbar-width:thin;overscroll-behavior:contain}
+.dock-actions{display:flex;flex-direction:column;gap:5px;align-items:center}
+.dock-actions button{width:48px;height:44px;padding:0!important;border-radius:24px;display:grid;place-items:center;font-size:21px;line-height:1}
+.dock-actions #clear{font-weight:800;font-size:20px}
+.dock-actions #weight{width:45px;height:37px;padding:2px;background:#fff;color:#152538;text-align:center;border-radius:9px;font-size:16px}
+.dock-actions #color{width:43px;height:37px;padding:2px;border-radius:9px;background:#19465f;border:1px solid #527b95}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap}
+@media(max-width:650px){.floating-dock{width:44px}.dock-actions button{width:40px;height:40px;font-size:18px}.dock-actions #weight,.dock-actions #color{width:38px;height:35px}}
+.record-message{display:block!important;position:static!important;width:48px!important;height:auto!important;clip:auto!important;white-space:normal!important;overflow-wrap:anywhere;font-size:11px;color:#ffdf91}.dock-actions #recordDownload{display:block;width:48px}.dock-actions #recordDownload[hidden]{display:none!important}
+
+/* Mobile-first V3: preserve all V2.9 video/annotation/recording logic */
+html{-webkit-text-size-adjust:100%}body{overflow-x:hidden}button,input,select{touch-action:manipulation}
+header{padding:12px 14px}header h1{font-size:18px}header small{font-size:11px}
+main{max-width:1180px;grid-template-columns:1fr;padding:8px;gap:10px}
+main>section.panel{padding:10px;overflow:visible}aside.side{display:block}aside.side>section.panel{padding:10px}
+#filename{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+main>section.panel>.tools:first-child{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:2px 0 12px}
+main>section.panel>.tools:first-child .filelabel{display:flex;align-items:center;justify-content:center;min-height:46px;text-align:center;font-size:13px}
+main>section.panel>.tools:first-child #filename{grid-column:1/-1;order:3}
+main>section.panel>.tools:first-child label.muted{font-size:12px;line-height:1.4}
+.comparegrid.dual{grid-template-columns:1fr}
+.viewwrap{padding-right:51px!important;min-width:0}
+.viewer{aspect-ratio:16/9;border:1px solid #31516b}
+.floating-dock{width:47px;max-height:100%;overflow-y:auto;overflow-x:hidden;gap:3px}
+.dock-buttons,.dock-actions{gap:4px}
+.dock-buttons button,.dock-actions button{width:43px;height:43px;min-height:43px;font-size:20px;border-radius:12px}
+.dock-actions #color,.dock-actions #weight{width:41px;height:36px}
+.record-message{width:43px!important;font-size:10px;line-height:1.25}
+.dock-actions #recordDownload{width:43px;font-size:11px}
+input[type=range]{height:30px;accent-color:#25b6e8;touch-action:pan-x}
+.controls{gap:6px;margin:7px 0}.controls button{min-height:44px;flex:1 1 auto}
+#clock,#clockA,#clock2{font-size:12px}#seek{display:none}#clock{display:none}
+#secondWrap .controls{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+#secondWrap .controls button{font-size:12px;padding:8px 2px;min-width:0}
+#secondWrap .controls #clock2{grid-column:1/-1}
+#recordInfo{color:#ffdf91}#status{font-size:12px;overflow-wrap:anywhere}
+footer{padding:10px;font-size:11px}
+@media(min-width:760px){main{padding:15px}main>section.panel{padding:15px}.comparegrid.dual{grid-template-columns:repeat(2,minmax(0,1fr))}.viewwrap{padding-right:58px!important}.floating-dock{width:52px}.dock-buttons button,.dock-actions button{width:48px;height:44px}}
+
+/* V3.7.1: fixed video frames, independent content zoom */
+.zoom-panel{background:#0b2132;border:1px solid #355a75;border-radius:10px;padding:9px;margin:7px 0 11px;display:grid;gap:6px}
+.zoom-panel .zoom-line{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.zoom-panel label{font-size:12px;color:#c5e4f6;white-space:nowrap}.zoom-panel input[type=range]{min-width:65px;flex:1;width:auto}.zoom-panel output{font-size:12px;min-width:43px;text-align:right}
+.zoom-panel button{padding:5px 9px;font-size:12px}.zoom-panel button.active{background:#0781b4}
+.viewer{margin-inline:auto;transform-origin:center center}.viewer video,.viewer canvas{transform-origin:center center}
+</style><link rel="manifest" href="./manifest.webmanifest"><meta name="theme-color" content="#08293d"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><link rel="apple-touch-icon" href="./icons/icon-192.png"></head><body><header><h1>🐟 Fishlike Swim Analyzer <small>PWA V3.8.2</small></h1><small>手機優先版 · 影片留在本機 · 支援雙畫面 · Samsung 優先 WebM 錄影</small></header><main><section class="panel"><div class="tools"><label class="filelabel">📂 匯入影片<input accept="video/*,.mp4,.mov,.m4v,.webm" id="upload" type="file"/></label><span class="muted" id="filename">尚未選擇影片</span><label class="filelabel">📂 匯入比較影片 B<input accept="video/*,.mp4,.mov,.m4v,.webm" id="upload2" type="file"/></label><label class="muted"><input id="compare" type="checkbox"/> 顯示雙影片</label><label class="muted"><input checked="" id="sync" type="checkbox"/> 同步播放與拖曳（取消勾選可各自調整）</label></div><pre id="micDiagnostics" style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:12px;color:#ffdf91" aria-live="polite"></pre><div class="comparegrid" id="comparegrid"><div class="viewwrap"><div class="viewer" id="viewer"><video id="video" playsinline="" preload="metadata" webkit-playsinline=""></video><canvas id="overlay"></canvas></div><div class="zoom-panel" data-zoom="A"><div class="zoom-line"><strong>🔍 影片 A 內容縮放</strong><button type="button" data-pan="A" aria-pressed="false">✋ 移動畫面</button><button type="button" data-reset="A">還原</button></div><div class="zoom-line"><label>內容放大</label><input aria-label="影片 A 內容放大" data-scale="A" type="range" min="100" max="300" step="10" value="100"><output data-scale-value="A">100%</output></div><div class="muted">可雙指縮放；開啟「移動畫面」後可拖曳位置</div></div><div class="muted" style="padding:6px">影片 A · 獨立時間拖拉條</div><input aria-label="影片 A 進度" id="seekA" max="1000" min="0" type="range" value="0"/><div class="controls"><span class="time" id="clockA">00:00.000 / 00:00.000</span></div><div class="floating-dock"><div class="dock-buttons"><button aria-label="直線" class="active" data-tool="line" title="直線">╱</button><button aria-label="箭頭" data-tool="arrow" title="箭頭">➜</button><button aria-label="圓圈" data-tool="circle" title="圓圈">◯</button><button aria-label="三點角度" data-tool="angle" title="三點角度">∠</button><button aria-label="手繪" data-tool="free" title="手繪">✎</button><button aria-label="無標記" data-tool="none" title="無標記">☝</button></div><div class="dock-actions"><input id="color" type="color" value="#ffdf43" title="線條顏色" aria-label="線條顏色"/><input id="weight" type="number" min="1" max="15" value="3" title="線條粗細" aria-label="線條粗細"/><button id="undo" title="復原" aria-label="復原">↶</button><button id="clear" title="清除標記" aria-label="清除標記">C</button><button id="capture" title="儲存截圖" aria-label="儲存截圖">📸</button><button id="record" title="開始錄影及麥克風" aria-label="開始錄影及麥克風">🔴</button><button disabled id="stopRecord" title="停止錄影" aria-label="停止錄影">■</button><button id="micDiag" title="診斷麥克風" aria-label="診斷麥克風">🎤</button><span id="recordInfo" class="record-message" role="status">🔴 錄影收音</span><a id="recordDownload" hidden style="color:#a9e5ff;font-size:12px;overflow-wrap:anywhere" href="#">⬇ 儲存錄影</a></div></div></div><div class="viewwrap" hidden="" id="secondWrap"><div class="viewer" id="viewer2"><video id="video2" playsinline="" preload="metadata" webkit-playsinline=""></video><canvas id="overlay2"></canvas></div><div class="zoom-panel" data-zoom="B"><div class="zoom-line"><strong>🔍 影片 B 內容縮放</strong><button type="button" data-pan="B" aria-pressed="false">✋ 移動畫面</button><button type="button" data-reset="B">還原</button></div><div class="zoom-line"><label>內容放大</label><input aria-label="影片 B 內容放大" data-scale="B" type="range" min="100" max="300" step="10" value="100"><output data-scale-value="B">100%</output></div><div class="muted">可雙指縮放；開啟「移動畫面」後可拖曳位置</div></div><div class="muted" style="padding:6px">影片 B · 可獨立畫線及拖拉進度</div><input aria-label="影片 B 進度" id="seek2" max="1000" min="0" type="range" value="0"/><div class="controls"><span class="time" id="clock2">00:00.000 / 00:00.000</span><button id="play2">▶ B 播放</button><button id="prev2">◀ B 前格</button><button id="next2">B 後格 ▶</button><button id="undo2">↶ B 復原</button><button id="clear2">清除 B 標記</button></div></div></div><div class="controls"><button id="play">▶ 播放</button><button id="prev">◀ 前一格</button><button id="next">後一格 ▶</button><label>速度 <select id="speed"><option value="0.25">0.25×</option><option selected="" value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1">1×</option><option value="1.5">1.5×</option><option value="2">2×</option></select></label><label>影格率 <select id="fps"><option>24</option><option selected="">30</option><option>60</option><option>120</option><option>240</option></select></label></div><input id="seek" max="1000" min="0" type="range" value="0"/><div class="controls"><span class="time" id="clock">00:00.000 / 00:00.000</span><span class="muted">逐格依選擇的 FPS 換算；實際精度依影片與瀏覽器而異</span></div><h3>本次定格截圖</h3><div class="shots" id="shots"><span class="muted">尚無截圖</span></div></section><aside class="side"><section aria-hidden="true" class="panel" style="display:none"><h3>學員分析紀錄</h3><div class="field"><label for="student">學員名稱</label><input id="student" placeholder="例如：王同學" type="text"/></div><div class="field"><label for="date">上課日期</label><input id="date" type="date"/></div><div class="field"><label for="stroke">泳姿</label><select id="stroke"><option>自由式</option><option>仰式</option><option>蛙式</option><option>蝶式</option></select></div><h3>TI 動作檢查</h3><p class="muted">勾選本次需要觀察或改善的項目</p><div class="checks" id="checks"></div><div class="field"><label for="notes">觀察與改善建議</label><textarea id="notes" placeholder="例如：換氣時頭部抬高，建議先練習髖部帶動旋轉…"></textarea></div><div class="controls"><button id="save">💾 匯出分析紀錄</button><button id="load">📋 匯入紀錄</button><input accept="application/json,.json" hidden="" id="recordFile" type="file"/></div><p class="hint">紀錄匯出為 JSON，可日後重新匯入；影片本身不會包含在紀錄內。</p></section><section class="panel"><h3>使用說明</h3><p class="muted">Samsung 手機請使用 Chrome 的 HTTPS 網址；iPad 請用 Safari 開啟本頁，從「檔案」選擇 MP4／MOV 影片。若無法載入，請確認影片已下載至本機，並查看下方錯誤訊息。影片旁的圖示可直接畫線、清除、截圖及錄影；C 代表清除標記。</p><div class="metric" id="status">準備就緒。影片僅在本機瀏覽器中開啟。</div></section></aside></main><footer>Fishlike International · PWA V3.8.2 · Slowmo 影片側邊工具列</footer><div style="padding:8px 12px"><button type="button" onclick="wmEditSettings()">✏️ 修改浮水印設定（設定一次，後續自動套用）</button></div><div id="wmEditor" hidden role="dialog" aria-modal="true" aria-label="截圖浮水印編輯"><div id="wmBox"><h3>📸 截圖浮水印編輯</h3><p class="muted">首次設定後，往後截圖自動套用；可隨時修改。</p><canvas id="wmPreview"></canvas><div class="wmrow"><label><input id="wmEnable" type="checkbox" checked> 加入浮水印</label><input id="wmText" type="text" placeholder="自行輸入浮水印文字" maxlength="150"></div><div class="wmrow"><label>位置 <select id="wmPos"><option value="br">右下</option><option value="bl">左下</option><option value="tr">右上</option><option value="tl">左上</option><option value="center">中央</option></select></label><label>大小 <input id="wmSize" type="range" min="1" max="8" value="3"><output id="wmSizeOut">3</output></label><label>透明度 <input id="wmAlpha" type="range" min="10" max="100" value="70"><output id="wmAlphaOut">70%</output></label></div><div class="wmrow"><button id="wmSave">⬇ 儲存截圖</button><button id="wmCancel">取消</button></div></div></div><script>
+const $=id=>document.getElementById(id),video=$('video'),canvas=$('overlay'),ctx=canvas.getContext('2d'),viewer=$('viewer');let tool='none',shapes=[],draft=null,start=null,anglePoints=[],drawing=false,objectUrl=null,shots=[];const checks=['前後平衡','左右平衡','身體流線','入水位置','手臂過中軸','髖部旋轉','重心轉移','二拍打水','手腳協調','動力鏈','高肘抱水','換氣與頭部位置','划距 SPL','划頻 Tempo'];$('checks').innerHTML=checks.map((x,i)=>`<label><input type="checkbox" value="${x}">${x}</label>`).join('');$('date').value=new Date().toLocaleDateString('en-CA');function status(s){$('status').textContent=s}function dimensions(){let w=video.videoWidth||1280,h=video.videoHeight||720;if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h}draw()}function point(e){const r=canvas.getBoundingClientRect(),cw=canvas.width,ch=canvas.height,scale=Math.min(r.width/cw,r.height/ch),dw=cw*scale,dh=ch*scale;return{x:Math.max(0,Math.min(cw,(e.clientX-r.left-(r.width-dw)/2)/scale)),y:Math.max(0,Math.min(ch,(e.clientY-r.top-(r.height-dh)/2)/scale))}}function paint(s){const a=s.a,b=s.b||a;ctx.strokeStyle=s.color;ctx.fillStyle=s.color;ctx.lineWidth=s.weight;ctx.lineCap='round';ctx.lineJoin='round';if(s.type==='free'){ctx.beginPath();s.points.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));ctx.stroke();return}if(s.type==='angle'){const [p,v,q]=s.points;ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(v.x,v.y);ctx.lineTo(q.x,q.y);ctx.stroke();const u=Math.atan2(p.y-v.y,p.x-v.x),w=Math.atan2(q.y-v.y,q.x-v.x),delta=Math.abs(Math.atan2(Math.sin(u-w),Math.cos(u-w)));ctx.font=`${Math.max(19,canvas.width/46)}px system-ui`;ctx.fillText((delta*180/Math.PI).toFixed(1)+'°',v.x+16,v.y-12);return}ctx.beginPath();if(s.type==='circle'){ctx.ellipse((a.x+b.x)/2,(a.y+b.y)/2,Math.max(1,Math.abs(b.x-a.x)/2),Math.max(1,Math.abs(b.y-a.y)/2),0,0,Math.PI*2)}else{ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y)}ctx.stroke();if(s.type==='arrow'){const t=Math.atan2(b.y-a.y,b.x-a.x),len=Math.max(15,canvas.width/45);ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-len*Math.cos(t-.5),b.y-len*Math.sin(t-.5));ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-len*Math.cos(t+.5),b.y-len*Math.sin(t+.5));ctx.stroke()}}function draw(){ctx.clearRect(0,0,canvas.width,canvas.height);shapes.forEach(paint);if(draft)paint(draft);if(anglePoints.length){ctx.fillStyle=$('color').value;anglePoints.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,7,0,Math.PI*2);ctx.fill()})}}function style(){return{color:$('color').value,weight:Number($('weight').value)||3}}canvas.addEventListener('pointerdown',e=>{if(tool==='none')return;const p=point(e);if(tool==='angle'){anglePoints.push(p);if(anglePoints.length===3){shapes.push({type:'angle',points:[...anglePoints],...style()});anglePoints=[]}draw();return}drawing=true;start=p;draft=tool==='free'?{type:'free',points:[p],...style()}:{type:tool,a:p,b:p,...style()};canvas.setPointerCapture(e.pointerId);draw()});canvas.addEventListener('pointermove',e=>{if(!drawing||!draft)return;const p=point(e);if(tool==='free')draft.points.push(p);else draft.b=p;draw()});function finish(){if(drawing&&draft){shapes.push(draft);draft=null;drawing=false;draw()}}canvas.addEventListener('pointerup',finish);canvas.addEventListener('pointercancel',finish);document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>{tool=b.dataset.tool;anglePoints=[];draft=null;drawing=false;document.querySelectorAll('[data-tool]').forEach(x=>x.classList.toggle('active',x===b));draw()}));$('undo').onclick=()=>{if(anglePoints.length)anglePoints.pop();else shapes.pop();draw()};$('clear').onclick=()=>{shapes=[];anglePoints=[];draw()};function importVideo(input,el,which){
+ const f=input.files&&input.files[0];if(!f)return;
+ if(!f.size){status('影片 '+which+' 是空檔案，請重新從「檔案」選擇原始影片');return}
+ const previous=which==='A'?objectUrl:comparisonUrl;
+ el.pause();el.removeAttribute('src');el.load();
+ const url=URL.createObjectURL(f);
+ if(which==='A'){objectUrl=url;$('filename').textContent=f.name;shapes=[];anglePoints=[];draw()}
+ else {comparisonUrl=url;comparisonName=f.name;$('compare').checked=true;setDual()}
+ el.src=url;el.load();
+ status('影片 '+which+' 讀取中：'+f.name+'（'+(f.size/1048576).toFixed(1)+' MB）');
+ // Retain object URLs until a different file is chosen; Safari can read lazily.
+ if(previous&&previous!==url)setTimeout(()=>URL.revokeObjectURL(previous),30000);
+ input.value='';
+}
+$('upload').addEventListener('change',e=>importVideo(e.target,video,'A'));
+video.onloadedmetadata=()=>{dimensions();video.playbackRate=Number($('speed').value);updateTime()};video.onresize=dimensions;video.ontimeupdate=()=>{updateTime();syncTime()};video.onended=()=>{$('play').textContent='▶ 播放'};function fmt(t){if(!Number.isFinite(t))t=0;return `${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}.${String(Math.floor(t*1000)%1000).padStart(3,'0')}`}function updateTime(){const t=fmt(video.currentTime)+' / '+fmt(video.duration),v=video.duration?Math.round(video.currentTime/video.duration*1000):0;$('clock').textContent=t;$('clockA').textContent=t;$('seek').value=v;$('seekA').value=v}$('play').onclick=async()=>{if(!video.src)return status('請先匯入影片');if(video.paused){try{await video.play();if(isDual()&&$('sync').checked&&video2.src){video2.currentTime=Math.min(video.currentTime,video2.duration||0);await video2.play().catch(()=>{});video2.playbackRate=video.playbackRate}$('play').textContent='⏸ 暫停'}catch(e){status('影片無法播放：'+e.message)}}else{video.pause();video2.pause();$('play').textContent='▶ 播放'}};$('speed').onchange=()=>{video.playbackRate=Number($('speed').value);video2.playbackRate=video.playbackRate};$('seekA').oninput=e=>{if(video.duration)video.currentTime=video.duration*Number(e.target.value)/1000;syncTime(true);updateTime()};$('seek').oninput=e=>{if(video.duration)video.currentTime=video.duration*Number(e.target.value)/1000;syncTime(true)};function frame(n){if(!video.duration)return status('請先匯入影片');video.pause();video2.pause();$('play').textContent='▶ 播放';video.currentTime=Math.max(0,Math.min(video.duration,video.currentTime+n/Number($('fps').value)));syncTime(true)}$('prev').onclick=()=>frame(-1);$('next').onclick=()=>frame(1);function snapshot(){if(!video.videoWidth)return status('請先匯入影片');const c=document.createElement('canvas');c.width=canvas.width;c.height=canvas.height;const x=c.getContext('2d');x.drawImage(video,0,0,c.width,c.height);x.drawImage(canvas,0,0);return c.toDataURL('image/png')};function download(url,name){const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove()}$('capture').onclick=()=>{try{const url=snapshot();if(!url)return;wmCapture(url,'swim-'+Math.round(video.currentTime*1000)+'.png')}catch(e){status('無法截圖：'+e.message)}};function renderShots(){$('shots').innerHTML='';shots.forEach(s=>{const d=document.createElement('div');d.className='shot';const im=document.createElement('img');im.src=s.url;im.alt='定格截圖';const b=document.createElement('button');b.textContent='下載';b.onclick=()=>download(s.url,s.name);d.append(im,b);$('shots').append(d)})}function record(){return{version:'1.0',student:$('student').value,date:$('date').value,stroke:$('stroke').value,notes:$('notes').value,checks:[...$('checks').querySelectorAll('input:checked')].map(x=>x.value),time:video.currentTime,shapes,shapes2,videoName:$('filename').textContent,comparisonName:comparisonName,compare:$('compare').checked}}$('save').onclick=()=>{const data=JSON.stringify(record(),null,2),url=URL.createObjectURL(new Blob([data],{type:'application/json'}));download(url,'fishlike-analysis-'+($('student').value||'record')+'.json');setTimeout(()=>URL.revokeObjectURL(url),10000);status('已匯出分析紀錄 JSON')};$('load').onclick=()=>$('recordFile').click();$('recordFile').onchange=async e=>{try{const r=JSON.parse(await e.target.files[0].text());$('student').value=r.student||'';$('date').value=r.date||'';$('stroke').value=r.stroke||'自由式';$('notes').value=r.notes||'';document.querySelectorAll('#checks input').forEach(x=>x.checked=(r.checks||[]).includes(x.value));shapes=Array.isArray(r.shapes)?r.shapes:[];anglePoints=[];shapes2=Array.isArray(r.shapes2)?r.shapes2:[];draw2();draw();status('已匯入分析紀錄；如需查看標記，請重新匯入對應影片')}catch(err){status('紀錄匯入失敗：'+err.message)}};
+
+// V2: synchronized comparison and narrated recording
+const video2=$('video2'),overlay2=$('overlay2');let comparisonUrl=null,comparisonName='',recorder=null,recordStream=null,micStream=null,recordCanvas=null,recordLoop=0,recordChunks=[],recordStart=0;
+function isDual(){return $('compare').checked&&!$('secondWrap').hidden}
+function setDual(){const show=$('compare').checked;$('secondWrap').hidden=!show;$('comparegrid').classList.toggle('dual',show);if(!show)video2.pause();syncTime(true)}
+$('compare').onchange=setDual;
+$('upload2').addEventListener('change',e=>importVideo(e.target,video2,'B'));
+function explainVideoError(el,label){const err=el.error;const codes={1:'讀取已中止',2:'影片讀取失敗',3:'影片編碼無法解碼',4:'瀏覽器不支援此影片格式或編碼'};status('影片 '+label+' 載入失敗：'+(codes[err?.code]||'未知錯誤')+'。請先試用 iPad「照片」播放；若可播放，建議匯出 H.264 編碼的 MP4 再匯入。');}
+video.addEventListener('error',()=>explainVideoError(video,'A'));
+video2.addEventListener('error',()=>explainVideoError(video2,'B'));
+video.addEventListener('loadeddata',()=>status('影片 A 已可播放：'+video.videoWidth+'×'+video.videoHeight));
+video2.addEventListener('loadeddata',()=>status('影片 B 已可播放：'+video2.videoWidth+'×'+video2.videoHeight));
+video2.onloadedmetadata=()=>{overlay2.width=video2.videoWidth||1280;overlay2.height=video2.videoHeight||720;syncTime(true);draw2()};
+function syncTime(force=false){if(!isDual()||!$('sync').checked||!video2.duration)return;if(force||Math.abs(video2.currentTime-video.currentTime)>.13)video2.currentTime=Math.min(Math.max(0,video.currentTime),video2.duration)}
+video.onpause=()=>video2.pause();video.onended=()=>video2.pause();
+// B video has its own independent drawing state and controls.
+const ctx2=overlay2.getContext('2d');let shapes2=[],draft2=null,angle2=[],drawing2=false;
+const paint2=(()=>{const source=paint.toString().replace(/\bctx\b/g,'ctx2').replace(/\bcanvas\b/g,'overlay2');return new Function('return ('+source+')')()})();
+function draw2(){ctx2.clearRect(0,0,overlay2.width,overlay2.height);shapes2.forEach(paint2);if(draft2)paint2(draft2);ctx2.fillStyle=$('color').value;angle2.forEach(p=>{ctx2.beginPath();ctx2.arc(p.x,p.y,7,0,Math.PI*2);ctx2.fill()})}
+function point2(e){const r=overlay2.getBoundingClientRect(),cw=overlay2.width,ch=overlay2.height,scale=Math.min(r.width/cw,r.height/ch),dw=cw*scale,dh=ch*scale;return{x:Math.max(0,Math.min(cw,(e.clientX-r.left-(r.width-dw)/2)/scale)),y:Math.max(0,Math.min(ch,(e.clientY-r.top-(r.height-dh)/2)/scale))}}
+overlay2.addEventListener('pointerdown',e=>{if(tool==='none')return;const p=point2(e);if(tool==='angle'){angle2.push(p);if(angle2.length===3){shapes2.push({type:'angle',points:[...angle2],...style()});angle2=[]}draw2();return}drawing2=true;draft2=tool==='free'?{type:'free',points:[p],...style()}:{type:tool,a:p,b:p,...style()};overlay2.setPointerCapture(e.pointerId);draw2()});
+overlay2.addEventListener('pointermove',e=>{if(!drawing2||!draft2)return;const p=point2(e);if(tool==='free')draft2.points.push(p);else draft2.b=p;draw2()});
+function finish2(){if(drawing2&&draft2){shapes2.push(draft2);draft2=null;drawing2=false;draw2()}}
+overlay2.addEventListener('pointerup',finish2);overlay2.addEventListener('pointercancel',finish2);
+$('undo2').onclick=()=>{if(angle2.length)angle2.pop();else shapes2.pop();draw2()};$('clear2').onclick=()=>{shapes2=[];angle2=[];draw2()};
+$('seek2').oninput=e=>{if(video2.duration){video2.currentTime=video2.duration*Number(e.target.value)/1000;if($('sync').checked&&video.duration)video.currentTime=Math.min(video.duration,video2.currentTime)}};
+video2.addEventListener('timeupdate',()=>{$('clock2').textContent=fmt(video2.currentTime)+' / '+fmt(video2.duration);$('seek2').value=video2.duration?Math.round(video2.currentTime/video2.duration*1000):0});
+$('play2').onclick=async()=>{if(!video2.src)return status('請先匯入 B 影片');if(video2.paused){await video2.play().catch(e=>status(e.message));$('play2').textContent='⏸ B 暫停'}else{video2.pause();$('play2').textContent='▶ B 播放'}};
+function frame2(n){if(!video2.duration)return;video2.pause();video2.currentTime=Math.max(0,Math.min(video2.duration,video2.currentTime+n/Number($('fps').value)));if($('sync').checked&&video.duration)video.currentTime=Math.min(video.duration,video2.currentTime)}
+$('prev2').onclick=()=>frame2(-1);$('next2').onclick=()=>frame2(1);
+
+// V2.9: Android Chrome recording, with visible errors and optional microphone.
+let recordingActive=false,recordUrl=null,recordMime='',recordError='',audioContext=null,audioSource=null,audioDestination=null,audioAnalyser=null,audioMonitorTimer=null;
+function micHelp(err){
+ const name=err?.name||'UnknownError';
+ if(name==='NotAllowedError'||name==='PermissionDeniedError')return 'Fishlike 網站的麥克風要求被拒絕（'+name+'）。請點下方「🎤 診斷收音」查看網站權限與執行環境。其他網站可錄音，不代表本站已獲授權。';
+ if(name==='NotFoundError')return '找不到可用麥克風，請檢查手機麥克風是否正常。';
+ if(name==='NotReadableError')return '麥克風目前無法使用，請關閉其他正在通話或錄音的 App 再試。';
+ if(name==='SecurityError')return '瀏覽器安全政策禁止麥克風，請直接用 Chrome 開啟 HTTPS 網址，避免在 App 內嵌瀏覽器開啟。';
+ return '麥克風啟動失敗（'+name+'）：'+(err?.message||'請確認網站權限與裝置設定');
+}
+async function requestMic(){
+ // Simple constraints are best supported on Android Chrome.
+ try{return await navigator.mediaDevices.getUserMedia({audio:true,video:false});}
+ catch(err){throw new Error(micHelp(err));}
+}
+
+async function diagnoseMic(){
+ const details=[];
+ details.push('網址：'+location.origin);
+ details.push('安全連線：'+(isSecureContext?'是':'否'));
+ details.push('嵌入框架：'+(window.top===window.self?'否':'是（可能被限制）'));
+ details.push('麥克風 API：'+(navigator.mediaDevices?.getUserMedia?'可用':'不可用'));
+ try { if(navigator.permissions?.query){const p=await navigator.permissions.query({name:'microphone'});details.push('網站麥克風權限：'+p.state);} }catch(e){details.push('網站權限狀態無法查詢');}
+ try {const stream=await navigator.mediaDevices.getUserMedia({audio:true});details.push('實際收音：成功（'+stream.getAudioTracks().length+' 條音軌）');stream.getTracks().forEach(t=>t.stop());}
+ catch(e){details.push('實際收音：'+e.name+' '+(e.message||''));}
+ const report=details.join('\n');$('micDiagnostics').textContent=report;recStatus('🎤 收音診斷完成，請查看影片下方結果');
+}
+$('micDiag').onclick=diagnoseMic;
+function recStatus(message){status(message);$('recordInfo').textContent=message;}
+function releaseRecording(){recordingActive=false;cancelAnimationFrame(recordLoop);clearInterval(audioMonitorTimer);audioMonitorTimer=null;try{audioSource?.disconnect();}catch(e){}try{audioDestination?.disconnect();}catch(e){}audioContext?.close().catch(()=>{});audioContext=null;audioSource=null;audioDestination=null;audioAnalyser=null;micStream?.getTracks().forEach(t=>t.stop());recordStream?.getTracks().forEach(t=>t.stop());micStream=null;recordStream=null;$('record').disabled=false;$('stopRecord').disabled=true;}
+function compose(){
+ if(!recordCanvas)return;
+ const dual=isDual()&&video2.videoWidth>0,w=960,h=540;
+ const ctx=recordCanvas.getContext('2d',{alpha:false});
+ ctx.fillStyle='#050a10';ctx.fillRect(0,0,recordCanvas.width,recordCanvas.height);
+ function one(v,c,ox,side){if(!v.videoWidth)return;const z=window.fishlikeZoom?.[side]||{frame:100,scale:100,x:0,y:0};const fw=w*z.frame/100,fh=h*z.frame/100,sc=Math.min(fw/v.videoWidth,fh/v.videoHeight),dw=v.videoWidth*sc*z.scale/100,dh=v.videoHeight*sc*z.scale/100,px=ox+w/2-dw/2+z.x*fw/100,py=h/2-dh/2+z.y*fh/100;ctx.save();ctx.beginPath();ctx.rect(ox+(w-fw)/2,(h-fh)/2,fw,fh);ctx.clip();try{ctx.drawImage(v,px,py,dw,dh);if(c)ctx.drawImage(c,px,py,dw,dh)}catch(e){}ctx.restore();}
+ one(video,canvas,0,'A');if(dual)one(video2,overlay2,w,'B');
+ if(recordingActive){recordLoop=requestAnimationFrame(compose);}
+}
+// V3.2: Write a WebM Duration element into Segment Info for Android players.
+// Duration is measured in milliseconds when the default TimecodeScale is 1,000,000 ns.
+function readVint(bytes,at,forId=false){
+ if(at>=bytes.length)throw Error('EBML EOF');
+ const first=bytes[at];let mask=128,len=1;
+ while(len<=8 && !(first&mask)){mask>>=1;len++}
+ if(len>8||at+len>bytes.length)throw Error('Invalid EBML vint');
+ let val=BigInt(forId?first:(first&(mask-1)));
+ for(let i=1;i<len;i++)val=(val<<8n)|BigInt(bytes[at+i]);
+ const unknown=!forId && val===((1n<<BigInt(7*len))-1n);
+ return {value:val,length:len,unknown};
+}
+function sizeVint(n){
+ let value=BigInt(n),len=1;
+ while(len<8 && value>=(1n<<BigInt(7*len))-1n)len++;
+ const out=new Uint8Array(len);
+ for(let i=len-1;i>=0;i--){out[i]=Number(value&255n);value>>=8n}
+ out[0]|=1<<(8-len);return out;
+}
+function joinBytes(...parts){let n=0;for(const p of parts)n+=p.length;const out=new Uint8Array(n);let i=0;for(const p of parts){out.set(p,i);i+=p.length}return out}
+async function addWebmDuration(blob,elapsedMs){
+ if(!blob.type.includes('webm')||!Number.isFinite(elapsedMs)||elapsedMs<=0)return blob;
+ const b=new Uint8Array(await blob.arrayBuffer());
+ try{
+  let segment=null,info=null;
+  for(let p=0;p<b.length;){
+   const id=readVint(b,p,true),sz=readVint(b,p+id.length),start=p+id.length+sz.length;
+   const end=sz.unknown?b.length:start+Number(sz.value);
+   if(id.value===0x18538067n){segment={p,id,sz,start,end};break}
+   if(end<=p||end>b.length)break;p=end;
+  }
+  if(!segment)return blob;
+  for(let p=segment.start;p<segment.end;){
+   const id=readVint(b,p,true),sz=readVint(b,p+id.length),start=p+id.length+sz.length;
+   const end=sz.unknown?segment.end:start+Number(sz.value);
+   if(id.value===0x1549a966n){info={p,start,end};break}
+   if(end<=p||end>b.length)break;p=end;
+  }
+  if(!info)return blob;
+  // Prefer existing TimecodeScale if present (default is 1,000,000 nanoseconds).
+  let scale=1000000;
+  for(let p=info.start;p<info.end;){
+   const id=readVint(b,p,true),sz=readVint(b,p+id.length),start=p+id.length+sz.length,end=start+Number(sz.value);
+   if(id.value===0x2ad7b1n){let v=0;for(let i=start;i<end;i++)v=v*256+b[i];scale=v;}
+   if(end<=p||end>info.end)break;p=end;
+  }
+  // Derive duration from encoded cluster/block timestamps, not wall-clock time.
+  // Android can keep encoding after stop, so elapsed wall time can under-report.
+  let maxTick=-1;
+  for(let p=segment.start;p<segment.end;){
+   const id=readVint(b,p,true),sz=readVint(b,p+id.length),start=p+id.length+sz.length;
+   const end=sz.unknown?segment.end:start+Number(sz.value);
+   if(end<=p||end>b.length)break;
+   if(id.value===0x1f43b675n){
+    let clusterTick=0;
+    for(let q=start;q<end;){
+     const ci=readVint(b,q,true),cs=readVint(b,q+ci.length),ds=q+ci.length+cs.length;
+     const de=cs.unknown?end:ds+Number(cs.value);
+     if(de<=q||de>end)break;
+     if(ci.value===0xe7n){clusterTick=0;for(let k=ds;k<de;k++)clusterTick=clusterTick*256+b[k];}
+     if(ci.value===0xa3n && de-ds>=4){
+      const track=readVint(b,ds),off=ds+track.length;
+      if(off+2<=de){let relative=(b[off]<<8)|b[off+1];if(relative>=32768)relative-=65536;maxTick=Math.max(maxTick,clusterTick+relative);}
+     }
+     q=de;
+    }
+   }
+   p=end;
+  }
+  const encodedMs=maxTick>=0?(maxTick*scale/1000000+50):NaN;
+  // Never write a duration shorter than the final encoded frame.
+  const chosenMs=Number.isFinite(encodedMs)?Math.max(encodedMs,elapsedMs):elapsedMs;
+  const durationValue=chosenMs*1000000/scale;
+  // If Duration exists, patch the float64 in place to avoid shifting seek offsets.
+  for(let p=info.start;p<info.end;){
+   const id=readVint(b,p,true),sz=readVint(b,p+id.length),start=p+id.length+sz.length,end=start+Number(sz.value);
+   if(id.value===0x4489n && Number(sz.value)===8){
+    new DataView(b.buffer).setFloat64(start,durationValue,false);
+    return new Blob([b],{type:blob.type});
+   }
+   if(end<=p||end>info.end)break;p=end;
+  }
+  const number=new Uint8Array(8);new DataView(number.buffer).setFloat64(0,durationValue,false);
+  const durationElement=joinBytes(new Uint8Array([0x44,0x89,0x88]),number);
+  const newInfoPayload=joinBytes(b.slice(info.start,info.end),durationElement);
+  const newInfo=joinBytes(new Uint8Array([0x15,0x49,0xa9,0x66]),sizeVint(newInfoPayload.length),newInfoPayload);
+  const newSegmentPayload=joinBytes(b.slice(segment.start,info.p),newInfo,b.slice(info.end,segment.end));
+  const segmentHead=joinBytes(new Uint8Array([0x18,0x53,0x80,0x67]),segment.sz.unknown?b.slice(segment.p+segment.id.length,segment.start):sizeVint(newSegmentPayload.length));
+  const result=joinBytes(b.slice(0,segment.p),segmentHead,newSegmentPayload,b.slice(segment.end));
+  return new Blob([result],{type:blob.type});
+ }catch(e){console.warn('WebM duration patch skipped',e);return blob;}
+}
+
+// V3.5: MP4 movie-header compatibility pass.  This is a metadata-only repair,
+// not a transcoder.  Never guess a duration from wall-clock time: derive it
+// from each track's actual sample timing table (stts).
+async function repairMp4Headers(blob){
+ if(!blob.type.includes('mp4'))return {blob,note:'非 MP4，使用 WebM 修正流程'};
+ try{
+  const bytes=new Uint8Array(await blob.arrayBuffer());
+  const dv=new DataView(bytes.buffer);const dec=new TextDecoder('ascii');
+  const u32=p=>dv.getUint32(p,false),u64=p=>Number(dv.getBigUint64(p,false));
+  const set32=(p,v)=>dv.setUint32(p,Math.min(0xffffffff,Math.max(0,Math.round(v))),false);
+  const set64=(p,v)=>dv.setBigUint64(p,BigInt(Math.max(0,Math.round(v))),false);
+  function boxes(start,end){const out=[];let p=start;
+   while(p+8<=end){let size=u32(p),header=8;const type=dec.decode(bytes.subarray(p+4,p+8));
+    if(size===1){if(p+16>end)break;size=u64(p+8);header=16;}
+    else if(size===0)size=end-p;
+    if(!Number.isSafeInteger(size)||size<header||p+size>end)break;
+    out.push({type,start:p,body:p+header,end:p+size});p+=size;
+   }return out;
+  }
+  const child=(b,name)=>b&&boxes(b.body,b.end).find(x=>x.type===name);
+  const moov=boxes(0,bytes.length).find(x=>x.type==='moov');
+  if(!moov)return {blob,note:'MP4 沒有完整 moov 索引，保留原檔'};
+  const mvhd=child(moov,'mvhd');if(!mvhd)return {blob,note:'缺少 mvhd，保留原檔'};
+  const movieVersion=bytes[mvhd.body],movieScale=u32(mvhd.body+(movieVersion?20:12));
+  if(!movieScale)return {blob,note:'無效電影時間刻度，保留原檔'};
+  const trackInfo=[];
+  for(const trak of boxes(moov.body,moov.end).filter(x=>x.type==='trak')){
+   const tkhd=child(trak,'tkhd'),mdia=child(trak,'mdia'),mdhd=child(mdia,'mdhd');
+   const stbl=child(child(child(mdia,'minf'),'stbl'),'stts');
+   if(!tkhd||!mdhd||!stbl)continue;
+   const version=bytes[mdhd.body],scale=u32(mdhd.body+(version?20:12));
+   const entries=u32(stbl.body+4);if(!scale||entries>100000||stbl.body+8+entries*8>stbl.end)continue;
+   let ticks=0;for(let i=0;i<entries;i++){const n=u32(stbl.body+8+i*8),delta=u32(stbl.body+12+i*8);ticks+=n*delta;}
+   if(!Number.isSafeInteger(ticks)||ticks<=0)continue;
+   const sec=ticks/scale;
+   const tkhdVersion=bytes[tkhd.body];
+   trackInfo.push({mdhd,version,ticks,tkhd,tkhdVersion,sec});
+  }
+  if(!trackInfo.length)return {blob,note:'MP4 使用分段式或無 stts；無法安全修正，保留原檔'};
+  const maxSeconds=Math.max(...trackInfo.map(t=>t.sec));
+  if(maxSeconds<0.1||maxSeconds>12*3600)return {blob,note:'影格時間資料異常，保留原檔'};
+  // If an edit list is present, its presentation timeline can differ from stts.
+  if(boxes(moov.body,moov.end).filter(x=>x.type==='trak').some(t=>child(child(t,'edts'),'elst')))
+   return {blob,note:'檔案有編輯時間表（elst），避免破壞同步，保留原檔'};
+  for(const t of trackInfo){
+   const mdhdOffset=t.mdhd.body+(t.version?24:16);
+   const tkhdOffset=t.tkhd.body+(t.tkhdVersion?28:20);
+   if(t.version===1)set64(mdhdOffset,t.ticks);else set32(mdhdOffset,t.ticks);
+   const movieTicks=t.sec*movieScale;
+   if(t.tkhdVersion===1)set64(tkhdOffset,movieTicks);else set32(tkhdOffset,movieTicks);
+  }
+  const mvhdOffset=mvhd.body+(movieVersion?24:16);
+  if(movieVersion===1)set64(mvhdOffset,maxSeconds*movieScale);else set32(mvhdOffset,maxSeconds*movieScale);
+  return {blob:new Blob([bytes],{type:'video/mp4'}),note:'已依影像／音訊樣本時間重整 MP4 時長欄位（'+maxSeconds.toFixed(2)+' 秒）'};
+ }catch(e){console.warn('MP4 metadata repair skipped',e);return {blob,note:'MP4 時間修正未套用，已保留原檔：'+e.message};}
+}
+
+$('record').onclick=async()=>{
+ if(recordingActive)return;
+ if(!video.videoWidth){recStatus('請先匯入並載入影片 A，再開始錄影');return;}
+ if(!window.MediaRecorder || !HTMLCanvasElement.prototype.captureStream){recStatus('此瀏覽器不支援影片畫面錄製，請用最新版 Android Chrome');return;}
+ $('record').disabled=true;recStatus('正在向手機內建麥克風請求授權…');
+ try{
+   // Request mic first, before creating the recording canvas, so errors are attributable to microphone permissions.
+   if(!window.isSecureContext || !navigator.mediaDevices?.getUserMedia)throw new Error('需要 HTTPS 與 Chrome 麥克風 API');
+   micStream=await requestMic();
+   recordCanvas=document.createElement('canvas');
+   recordCanvas.width=(isDual()&&video2.videoWidth?1920:960);recordCanvas.height=540;
+   compose();
+   const canvasStream=recordCanvas.captureStream(24);
+   if(!canvasStream.getVideoTracks().length)throw new Error('無法擷取畫面，請改用最新版 Chrome');
+   // Android Chrome: route the live microphone through Web Audio to a single
+   // explicit audio track, which MediaRecorder can reliably mux with canvas video.
+   const micTrack=micStream.getAudioTracks()[0];
+   if(!micTrack || micTrack.readyState!=='live')throw new Error('麥克風沒有有效音軌');
+   const AudioCtx=window.AudioContext||window.webkitAudioContext;
+   let audioTracks=[];
+   if(AudioCtx){
+     audioContext=new AudioCtx();
+     await audioContext.resume();
+     audioSource=audioContext.createMediaStreamSource(micStream);
+     audioDestination=audioContext.createMediaStreamDestination();
+     audioAnalyser=audioContext.createAnalyser();audioAnalyser.fftSize=1024;
+     audioSource.connect(audioAnalyser);
+     audioAnalyser.connect(audioDestination);
+     audioTracks=audioDestination.stream.getAudioTracks();
+   }else{
+     audioTracks=micStream.getAudioTracks();
+   }
+   if(!audioTracks.length)throw new Error('無法建立錄音音軌');
+   recordStream=new MediaStream([...canvasStream.getVideoTracks(),...audioTracks]);
+   if(recordStream.getAudioTracks().length!==1)throw new Error('錄影音軌建立失敗');
+   const types=['video/webm;codecs=vp8,opus','video/webm;codecs=vp9,opus','video/webm','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4'];
+   const mime=types.find(t=>MediaRecorder.isTypeSupported(t));
+   recorder=new MediaRecorder(recordStream,mime?{mimeType:mime,videoBitsPerSecond:2500000,audioBitsPerSecond:128000}:undefined);
+   recordMime=recorder.mimeType||mime||'video/webm';recordChunks=[];recordError='';
+   recorder.ondataavailable=e=>{if(e.data&&e.data.size)recordChunks.push(e.data)};
+   recorder.onerror=e=>{recordError=e.error?.message||'錄製中發生錯誤';recStatus('錄影錯誤：'+recordError)};
+   recorder.onstop=async()=>{
+     const elapsedMs=Date.now()-recordStart;
+     releaseRecording();
+     if(!recordChunks.length){recStatus('錄影未產生資料，請重試或改用最新版 Chrome');return;}
+     const type=recordMime,ext=type.includes('mp4')?'mp4':'webm';
+     if(recordUrl)URL.revokeObjectURL(recordUrl);
+     const original=new Blob(recordChunks,{type});
+     const result=type.includes('mp4')?await repairMp4Headers(original):{blob:await addWebmDuration(original,elapsedMs),note:'已修正 WebM 時間索引（Samsung 優先模式）'};
+     const finalized=result.blob;
+     const finalizeNote=result.note+(type.includes('mp4')?'；此裝置未支援 WebM，MP4 可能仍是分段式，若時間異常請回報原檔':'');
+     recordUrl=URL.createObjectURL(finalized);
+     const link=$('recordDownload');link.href=recordUrl;link.download='fishlike-analysis-'+Date.now()+'.'+ext;link.hidden=false;
+     link.textContent='⬇ 儲存錄影 ('+ext.toUpperCase()+')';
+     recStatus('錄影完成，實錄約 '+Math.round(elapsedMs/1000)+' 秒（'+ext.toUpperCase()+'），正在檢查檔案時間（優先輸出 WebM）…');
+     const probe=document.createElement('video');probe.preload='metadata';probe.src=recordUrl;
+     const timer=setTimeout(()=>{probe.removeAttribute('src');probe.load();recStatus('錄影已儲存；'+finalizeNote+'。播放器無法快速取得時長，請下載檢查。');},4500);
+     probe.onloadedmetadata=()=>{clearTimeout(timer);const duration=probe.duration;probe.removeAttribute('src');probe.load();recStatus('錄影完成：實錄 '+Math.round(elapsedMs/1000)+' 秒；檔案時長 '+(Number.isFinite(duration)?duration.toFixed(1)+' 秒':'無法判讀')+'。'+finalizeNote+'。請下載確認聲音。'+(recordError?' '+recordError:''));};
+     probe.onerror=()=>{clearTimeout(timer);recStatus('錄影已產生，但瀏覽器無法讀取時長；請下載測試。');};
+   };
+   recordStart=Date.now();recordingActive=true;recorder.start(1000);
+   $('stopRecord').disabled=false;
+   compose();
+   recStatus('🔴 錄影與收音中（麥克風已連接）');
+   if(audioAnalyser){
+     const levels=new Uint8Array(audioAnalyser.fftSize);
+     audioMonitorTimer=setInterval(()=>{
+       if(!recordingActive)return;
+       audioAnalyser.getByteTimeDomainData(levels);
+       let sum=0;for(const v of levels){const x=(v-128)/128;sum+=x*x;}
+       const rms=Math.sqrt(sum/levels.length);
+       $('recordInfo').textContent='🔴 '+Math.floor((Date.now()-recordStart)/1000)+'秒 🎤 '+(rms<0.008?'聲音偏低，請對手機說話':'收音中 ▮'.repeat(Math.min(5,Math.max(1,Math.ceil(rms*35)))));
+     },350);
+   }
+ }catch(err){releaseRecording();recStatus('無法開始錄影：'+(err.message||String(err))+'。可點 🎤 診斷收音。');}
+};
+$('stopRecord').onclick=()=>{
+ if(recorder&&recorder.state!=='inactive'){
+  $('stopRecord').disabled=true;recStatus('正在完成影片，請稍候…');
+  try{recorder.requestData();}catch(e){}
+  recorder.stop();
+ }
+};
+if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
+ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(err=>console.warn('PWA cache unavailable',err)));
+}
+
+// V3.7.1 zoom/frame controls, independent for A and B. These do not change source files.
+window.fishlikeZoom={A:{frame:100,scale:100,x:0,y:0,pan:false},B:{frame:100,scale:100,x:0,y:0,pan:false}};
+(function(){
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const sides={A:{viewer:document.getElementById('viewer'),video:document.getElementById('video'),overlay:document.getElementById('overlay')},B:{viewer:document.getElementById('viewer2'),video:document.getElementById('video2'),overlay:document.getElementById('overlay2')}};
+function apply(side){const z=fishlikeZoom[side],o=sides[side];o.viewer.style.width=z.frame+'%';const tr=`translate(${z.x}%,${z.y}%) scale(${z.scale/100})`;o.video.style.transform=tr;o.overlay.style.transform=tr;
+document.querySelector(`[data-scale-value="${side}"]`).textContent=z.scale+'%';document.querySelector(`[data-scale="${side}"]`).value=z.scale;
+const b=document.querySelector(`[data-pan="${side}"]`);b.classList.toggle('active',z.pan);b.setAttribute('aria-pressed',String(z.pan));}
+for(const side of ['A','B']){const z=fishlikeZoom[side],o=sides[side];
+
+document.querySelector(`[data-scale="${side}"]`).addEventListener('input',e=>{z.scale=Number(e.target.value);apply(side)});
+document.querySelector(`[data-reset="${side}"]`).addEventListener('click',()=>{Object.assign(z,{frame:100,scale:100,x:0,y:0,pan:false});apply(side)});
+document.querySelector(`[data-pan="${side}"]`).addEventListener('click',()=>{z.pan=!z.pan;apply(side)});
+let drag=null;const touches=new Map();let pinchStart=null;
+o.overlay.addEventListener('pointerdown',e=>{touches.set(e.pointerId,{x:e.clientX,y:e.clientY});if(touches.size===2){const pts=[...touches.values()];pinchStart={distance:Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y),scale:z.scale};}
+if(z.pan||touches.size>=2){drag={id:e.pointerId,x:e.clientX,y:e.clientY,ox:z.x,oy:z.y};o.overlay.setPointerCapture(e.pointerId);e.stopImmediatePropagation();e.preventDefault();}},true);
+o.overlay.addEventListener('pointermove',e=>{if(touches.has(e.pointerId))touches.set(e.pointerId,{x:e.clientX,y:e.clientY});if(touches.size>=2&&pinchStart){const pts=[...touches.values()],d=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);z.scale=clamp(Math.round(pinchStart.scale*d/Math.max(1,pinchStart.distance)/10)*10,100,300);apply(side);e.stopImmediatePropagation();e.preventDefault();return;}
+if(z.pan&&drag){const r=o.viewer.getBoundingClientRect();z.x=clamp(drag.ox+100*(e.clientX-drag.x)/Math.max(1,r.width),-100,100);z.y=clamp(drag.oy+100*(e.clientY-drag.y)/Math.max(1,r.height),-100,100);apply(side);e.stopImmediatePropagation();e.preventDefault();}},true);
+for(const type of ['pointerup','pointercancel'])o.overlay.addEventListener(type,e=>{touches.delete(e.pointerId);if(touches.size<2)pinchStart=null;if(drag?.id===e.pointerId)drag=null;if(z.pan){e.stopImmediatePropagation();e.preventDefault();}},true);
+apply(side);
+}
+})();
+
+// V3.8: editable watermark applied to the exported still image only.
+let wmSource=null,wmFilename='';
+const wmIds=['wmEnable','wmText','wmPos','wmSize','wmAlpha'];
+let wmConfig={enabled:true,text:'Fishlike International',pos:'br',size:3,alpha:70};
+try{wmConfig={...wmConfig,...JSON.parse(localStorage.getItem('fishlike-wm-v38')||'{}')}}catch(e){}
+function wmSyncControls(){ $('wmEnable').checked=!!wmConfig.enabled;$('wmText').value=wmConfig.text||'';$('wmPos').value=wmConfig.pos;$('wmSize').value=wmConfig.size;$('wmAlpha').value=wmConfig.alpha; }
+function wmUpdate(){wmConfig={enabled:$('wmEnable').checked,text:$('wmText').value,pos:$('wmPos').value,size:Number($('wmSize').value),alpha:Number($('wmAlpha').value)};$('wmSizeOut').textContent=wmConfig.size;$('wmAlphaOut').textContent=wmConfig.alpha+'%';try{localStorage.setItem('fishlike-wm-v38',JSON.stringify(wmConfig))}catch(e){}wmDraw()}
+wmIds.forEach(id=>$(id).addEventListener('input',wmUpdate));
+function wmDraw(){if(!wmSource)return;const c=$('wmPreview');c.width=wmSource.naturalWidth;c.height=wmSource.naturalHeight;const g=c.getContext('2d');g.drawImage(wmSource,0,0);if(!wmConfig.enabled||!wmConfig.text.trim())return;const w=c.width,h=c.height;const font=Math.max(14,Math.round(Math.min(w,h)*(.018+wmConfig.size*.006)));const margin=Math.max(12,Math.round(Math.min(w,h)*.035));g.save();g.globalAlpha=wmConfig.alpha/100;g.font='bold '+font+'px system-ui, sans-serif';g.textBaseline='middle';g.textAlign=wmConfig.pos==='center'?'center':wmConfig.pos.endsWith('l')?'left':'right';const x=wmConfig.pos==='center'?w/2:wmConfig.pos.endsWith('l')?margin:w-margin;const y=wmConfig.pos==='center'?h/2:wmConfig.pos.startsWith('t')?margin+font/2:h-margin-font/2;g.lineWidth=Math.max(2,font*.16);g.strokeStyle='#061827';g.fillStyle='#ffffff';const lines=wmConfig.text.split(/\n/).slice(0,4);lines.forEach((line,i)=>{let t=line;while(g.measureText(t).width>w-2*margin&&t.length>1)t=t.slice(0,-1);const yy=y+(i-(lines.length-1)/2)*font*1.3;g.strokeText(t,x,yy);g.fillText(t,x,yy)});g.restore()}
+let wmSettingsOnly=false;
+function wmCapture(url,name){
+ wmSettingsOnly=false;
+ let configured=false;try{configured=localStorage.getItem('fishlike-wm-configured')==='1'}catch(e){}
+ if(!configured){openWatermarkEditor(url,name);return}
+ const im=new Image();im.onload=()=>{wmSource=im;wmFilename=name;wmDraw();try{const result=$('wmPreview').toDataURL('image/png');download(result,name);shots.push({url:result,name});renderShots();status('已自動套用浮水印並儲存截圖')}catch(e){status('截圖儲存失敗：'+e.message)}wmSource=null};im.src=url;
+}
+function wmEditSettings(){wmSettingsOnly=true;const c=document.createElement('canvas');c.width=640;c.height=360;const g=c.getContext('2d');g.fillStyle='#176b91';g.fillRect(0,0,640,360);if(video.videoWidth){try{g.drawImage(video,0,0,640,360)}catch(e){}}openWatermarkEditor(c.toDataURL('image/png'),'preview.png')}
+function openWatermarkEditor(url,name){wmFilename=name;wmSource=new Image();wmSource.onload=()=>{wmSyncControls();wmUpdate();$('wmEditor').hidden=false};wmSource.onerror=()=>status('截圖預覽失敗');wmSource.src=url}
+$('wmCancel').onclick=()=>{$('wmEditor').hidden=true;wmSource=null;wmSettingsOnly=false};
+$('wmSave').onclick=()=>{try{wmDraw();if(wmSettingsOnly){localStorage.setItem('fishlike-wm-configured','1');$('wmEditor').hidden=true;wmSource=null;wmSettingsOnly=false;status('浮水印設定已儲存');return;}const url=$('wmPreview').toDataURL('image/png');download(url,wmFilename);shots.push({url,name:wmFilename});renderShots();try{localStorage.setItem('fishlike-wm-configured','1')}catch(e){}status('已儲存截圖，往後自動套用浮水印');$('wmEditor').hidden=true;wmSource=null}catch(e){status('截圖儲存失敗：'+e.message)}};
+</script></body></html>
