@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace 'tw.fishlike.analyzer'
+    namespace applicationId 'tw.fishlike.analyzer.video'
     compileSdk 35
 
     defaultConfig {
